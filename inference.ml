@@ -22,6 +22,15 @@ let symbols = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 let c = ref 0
 let gensym () = incr c ; Char.escaped (String.get symbols (!c-1))
 
+let rec term_type_of_term t = match t with
+  | Int(_) -> [(t,TInt)]
+  | Var(_) -> [(t,TVar(gensym()))]
+  | Lambda(Var(s),body) ->
+     (t,TVar(gensym()))::(Var(s),TVar(gensym()))::(term_type_of_term body)
+  | Lambda (_,_) -> failwith "Parse error"
+  | App(t1,t2) ->
+     (t,TVar(gensym()))::(term_type_of_term t1)@(term_type_of_term t2)
+
 let rec typed_term_of_term t = match t with
   | Int(_) -> TypedTerm (t,TInt,TypedChildrenInt)
   | Var(_) -> TypedTerm (t, TVar(gensym()), TypedChildrenVar)
@@ -32,8 +41,9 @@ let rec typed_term_of_term t = match t with
   | App(t1,t2) -> TypedTerm(t,TVar(gensym()),
                             TypedChildrenApp(typed_term_of_term t1,
                                              typed_term_of_term t2))
-
+(*************)
 (* STRING OF *)
+(*************)
 
 let rec nspaces = function
   | 0 -> ""
@@ -44,6 +54,12 @@ let rec string_of_term level = function
   | Var(s) -> (nspaces level)^"Var("^s^")"
   | Lambda(t1,t2) -> (nspaces level)^"Lambda(\n"^(string_of_term (level+1) t1)^",\n"^(string_of_term (level+1) t2)^")"
   | App(t1, t2) -> (nspaces level)^"App(\n"^(string_of_term (level+1) t1)^",\n"^(string_of_term (level+1) t2)^")"
+
+let rec string_of_term2 = function
+  | Int(n) -> "Int("^(string_of_int n)^")"
+  | Var(s) -> "Var("^s^")"
+  | Lambda(t1,t2) -> "Lambda("^(string_of_term2 t1)^", "^(string_of_term2 t2)^")"
+  | App(t1, t2) -> "App("^(string_of_term2 t1)^", "^(string_of_term2 t2)^")"
 
 let rec string_of_type = function
   | TInt -> "TInt"
@@ -60,7 +76,9 @@ and string_of_typed_children level = function
   | TypedChildrenLambda (tt1,tt2) -> (nspaces level)^"TypedChildrenLambda(\n"^(string_of_typed_term (level+1) tt1)^",\n"^(string_of_typed_term (level+1) tt2)^")"
   | TypedChildrenApp (tt1,tt2) -> (nspaces level)^"TypedChildrenApp(\n"^(string_of_typed_term (level+1) tt1)^",\n"^(string_of_typed_term (level+1) tt2)^")"
 
+(********)
 (* MAIN *)
+(********)
 
 let _ =
   (*let t1 = App(App(Lambda(Var "x",Lambda(Var "y",Var("y"))),Int(2)),Int(1)) in*)
@@ -71,5 +89,5 @@ let _ =
        * Lambda(Var("x"),Var("x"));
        * Lambda(Var("x"),Lambda(Var("y"),Var("x"))); *)
     ] in
-  List.map (fun t -> print_endline (string_of_typed_term 0 (typed_term_of_term t));print_newline()) ts
-
+  (*List.map (fun t -> print_endline (string_of_typed_term 0 (typed_term_of_term t));print_newline()) ts*)
+  List.map (fun t -> List.map (function (t,tt) -> print_endline((string_of_term2 t)^" : "^(string_of_type tt))) (term_type_of_term t)) ts
