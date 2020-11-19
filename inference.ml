@@ -45,6 +45,18 @@ let rec typed_term_of_term t = match t with
                             TypedChildrenApp(typed_term_of_term t1,
                                              typed_term_of_term t2))
 
+let rec list_of_typed_term typed_term = match typed_term with
+  | TypedTerm(term,term_type,TypedChildrenInt) -> [(term,term_type)]
+
+  | TypedTerm(term,term_type,TypedChildrenVar) -> [(term,term_type)]
+
+  | TypedTerm(term1,term_type1,TypedChildrenLambda(typed_term1,typed_term2)) ->
+     (term1,term_type1)::(list_of_typed_term typed_term1)@(list_of_typed_term typed_term2)
+
+  | TypedTerm(term1,term_type1,TypedChildrenApp(typed_term1,typed_term2)) ->
+     (term1,term_type1)::(list_of_typed_term typed_term1)@(list_of_typed_term typed_term2)
+
+
 let rec constr_of_typed_term term = match term with
 
   | TypedTerm(Int(_),_,TypedChildrenInt) -> []
@@ -97,7 +109,6 @@ and string_of_typed_children level = function
   | TypedChildrenLambda (tt1,tt2) -> (nspaces level)^"TypedChildrenLambda(\n"^(string_of_typed_term (level+1) tt1)^",\n"^(string_of_typed_term (level+1) tt2)^")"
   | TypedChildrenApp (tt1,tt2) -> (nspaces level)^"TypedChildrenApp(\n"^(string_of_typed_term (level+1) tt1)^",\n"^(string_of_typed_term (level+1) tt2)^")"
 
-
 let string_of_constr = function
   | Equality(tt1,tt2) -> "Equality("^(string_of_type tt1)^", "^(string_of_type tt2)^")"
 
@@ -106,14 +117,10 @@ let string_of_constr = function
 (********)
 
 let _ =
-  (*let t1 = App(App(Lambda(Var "x",Lambda(Var "y",Var("y"))),Int(2)),Int(1)) in*)
-  let ts = [
-      App(App(Lambda(Var "x",Lambda(Var "y",Var("y"))),Int(2)),Int(1));
-      (* Var("x");
-       * Int(12);
-       * Lambda(Var("x"),Var("x"));
-       * Lambda(Var("x"),Lambda(Var("y"),Var("x"))); *)
-    ] in
-  List.map (fun t -> List.map (fun c -> print_endline(string_of_constr c)) (constr_of_typed_term (typed_term_of_term t))) ts;
-  (*List.map (fun t -> print_endline (string_of_typed_term 0 (typed_term_of_term t));print_newline()) ts*)
-  (*List.map (fun t -> List.map (function (t,tt) -> print_endline((string_of_term2 t)^" : "^(string_of_type tt))) (term_type_of_term t)) ts*)
+  let term = App(Lambda(Var("x"),Var("x")),Int(12)) in
+  let typed_term = typed_term_of_term term in
+  let list_typed_term = list_of_typed_term typed_term in
+  let constr = constr_of_typed_term typed_term in
+  (*print_endline(string_of_typed_term 0 typed_term);print_newline();*)
+  List.map (function (term,term_type) -> print_endline ((string_of_type term_type)^" : "^(string_of_term2 term))) list_typed_term;
+  List.map (fun c -> print_endline(string_of_constr c)) constr;
